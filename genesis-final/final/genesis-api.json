@@ -1,0 +1,273 @@
+{
+  "version": "1",
+  "name": "Genesis API",
+  "type": "collection",
+  "environments": {
+    "local": {
+      "name": "local",
+      "variables": {
+        "baseUrl": "http://localhost:8080",
+        "jwt": ""
+      }
+    }
+  },
+  "items": [
+    {
+      "name": "Auth",
+      "type": "folder",
+      "items": [
+        {
+          "name": "Registrar usuario",
+          "type": "http",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/v1/auth/register",
+            "headers": [{"name": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "json",
+              "json": "{\"email\": \"usuario@test.com\", \"password\": \"Test1234!\", \"name\": \"Usuario Test\"}"
+            }
+          }
+        },
+        {
+          "name": "Login",
+          "type": "http",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/v1/auth/login",
+            "headers": [{"name": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "json",
+              "json": "{\"email\": \"usuario@test.com\", \"password\": \"Test1234!\"}"
+            }
+          }
+        },
+        {
+          "name": "Login Admin",
+          "type": "http",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/v1/auth/login",
+            "headers": [{"name": "Content-Type", "value": "application/json"}],
+            "body": {
+              "mode": "json",
+              "json": "{\"email\": \"admin@breaze.com\", \"password\": \"Admin123!\"}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Perfil y Transacciones",
+      "type": "folder",
+      "items": [
+        {
+          "name": "Mi perfil",
+          "type": "http",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/profile",
+            "headers": [{"name": "Authorization", "value": "Bearer {{jwt}}"}]
+          }
+        },
+        {
+          "name": "Historial de transacciones",
+          "type": "http",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/transactions?page=0&size=10",
+            "headers": [{"name": "Authorization", "value": "Bearer {{jwt}}"}]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Operaciones",
+      "type": "folder",
+      "items": [
+        {
+          "name": "Catálogo activo",
+          "type": "http",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/operations/catalog",
+            "headers": [{"name": "Authorization", "value": "Bearer {{jwt}}"}]
+          }
+        },
+        {
+          "name": "OP-01 Calculadora de crédito",
+          "type": "http",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/v1/operations/OP-01/execute",
+            "headers": [
+              {"name": "Authorization", "value": "Bearer {{jwt}}"},
+              {"name": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "json",
+              "json": "{\"params\": {\"precio\": 5000000, \"cuotas\": 24, \"tasa_mensual\": 1.5}}"
+            }
+          }
+        },
+        {
+          "name": "OP-02 Conversor COP/USD",
+          "type": "http",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/v1/operations/OP-02/execute",
+            "headers": [
+              {"name": "Authorization", "value": "Bearer {{jwt}}"},
+              {"name": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "json",
+              "json": "{\"params\": {\"monto\": 100, \"moneda_origen\": \"USD\"}}"
+            }
+          }
+        },
+        {
+          "name": "OP-03 Calculadora IMC",
+          "type": "http",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/v1/operations/OP-03/execute",
+            "headers": [
+              {"name": "Authorization", "value": "Bearer {{jwt}}"},
+              {"name": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "json",
+              "json": "{\"params\": {\"peso_kg\": 75, \"altura_cm\": 175}}"
+            }
+          }
+        },
+        {
+          "name": "OP-04 Calculadora de sueño",
+          "type": "http",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/v1/operations/OP-04/execute",
+            "headers": [
+              {"name": "Authorization", "value": "Bearer {{jwt}}"},
+              {"name": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "json",
+              "json": "{\"params\": {\"modo\": \"HORA_DESPERTAR\", \"hora\": \"06:30\", \"minutos_para_dormir\": 14}}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Planes",
+      "type": "folder",
+      "items": [
+        {
+          "name": "Listar planes",
+          "type": "http",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/plans?page=0&size=10",
+            "headers": [{"name": "Authorization", "value": "Bearer {{jwt}}"}]
+          }
+        },
+        {
+          "name": "Suscribirse al plan Pro (id=2)",
+          "type": "http",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/v1/plans/2/subscribe",
+            "headers": [{"name": "Authorization", "value": "Bearer {{jwt}}"}]
+          }
+        },
+        {
+          "name": "Crear plan (admin)",
+          "type": "http",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/v1/plans",
+            "headers": [
+              {"name": "Authorization", "value": "Bearer {{jwt}}"},
+              {"name": "Content-Type", "value": "application/json"}
+            ],
+            "body": {
+              "mode": "json",
+              "json": "{\"name\": \"Premium\", \"tokensGranted\": 2000, \"description\": \"Plan premium\"}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Administración",
+      "type": "folder",
+      "items": [
+        {
+          "name": "Listar usuarios",
+          "type": "http",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/admin/users?page=0&size=10",
+            "headers": [{"name": "Authorization", "value": "Bearer {{jwt}}"}]
+          }
+        },
+        {
+          "name": "Recargar tokens usuario",
+          "type": "http",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/v1/admin/users/2/recharge?amount=500",
+            "headers": [{"name": "Authorization", "value": "Bearer {{jwt}}"}]
+          }
+        },
+        {
+          "name": "Desactivar usuario",
+          "type": "http",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/api/v1/admin/users/2/deactivate",
+            "headers": [{"name": "Authorization", "value": "Bearer {{jwt}}"}]
+          }
+        },
+        {
+          "name": "Activar usuario",
+          "type": "http",
+          "request": {
+            "method": "PATCH",
+            "url": "{{baseUrl}}/api/v1/admin/users/2/activate",
+            "headers": [{"name": "Authorization", "value": "Bearer {{jwt}}"}]
+          }
+        },
+        {
+          "name": "Métricas globales",
+          "type": "http",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/admin/metrics?topN=5",
+            "headers": [{"name": "Authorization", "value": "Bearer {{jwt}}"}]
+          }
+        },
+        {
+          "name": "Ver tasa COP/USD",
+          "type": "http",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/admin/exchange-rate",
+            "headers": [{"name": "Authorization", "value": "Bearer {{jwt}}"}]
+          }
+        },
+        {
+          "name": "Actualizar tasa COP/USD",
+          "type": "http",
+          "request": {
+            "method": "PUT",
+            "url": "{{baseUrl}}/api/v1/admin/exchange-rate?value=4350.50",
+            "headers": [{"name": "Authorization", "value": "Bearer {{jwt}}"}]
+          }
+        }
+      ]
+    }
+  ]
+}

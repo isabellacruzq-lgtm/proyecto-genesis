@@ -1,0 +1,600 @@
+openapi: 3.0.3
+info:
+  title: Proyecto Genesis API
+  description: Plataforma de operaciones de cómputo con trazabilidad de tokens — Breaze in the Moon
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:8080
+    description: Servidor local
+
+security:
+  - bearerAuth: []
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    ApiResponse:
+      type: object
+      properties:
+        success:  { type: boolean }
+        message:  { type: string }
+        timestamp: { type: string, format: date-time }
+        data:     {}
+
+    AuthResponse:
+      type: object
+      properties:
+        token: { type: string }
+
+    UserProfile:
+      type: object
+      properties:
+        id:           { type: integer }
+        email:        { type: string }
+        name:         { type: string }
+        role:         { type: string, enum: [USER, ADMIN] }
+        tokenBalance: { type: integer }
+        planName:     { type: string }
+        planTokens:   { type: integer }
+        active:       { type: boolean }
+
+    UserResponse:
+      type: object
+      properties:
+        id:           { type: integer }
+        email:        { type: string }
+        name:         { type: string }
+        role:         { type: string }
+        tokenBalance: { type: integer }
+        active:       { type: boolean }
+        planName:     { type: string }
+
+    PlanResponse:
+      type: object
+      properties:
+        id:            { type: integer }
+        name:          { type: string }
+        tokensGranted: { type: integer }
+        description:   { type: string }
+        active:        { type: boolean }
+
+    CatalogOperationResponse:
+      type: object
+      properties:
+        id:          { type: integer }
+        code:        { type: string }
+        name:        { type: string }
+        description: { type: string }
+        baseCost:    { type: integer }
+        active:      { type: boolean }
+
+    ExecuteOperationResponse:
+      type: object
+      properties:
+        operationCode: { type: string }
+        operationName: { type: string }
+        result:        { type: object }
+        tokensInput:   { type: integer }
+        tokensOutput:  { type: integer }
+        baseCost:      { type: integer }
+        totalCost:     { type: integer }
+        balanceBefore: { type: integer }
+        balanceAfter:  { type: integer }
+        executedAt:    { type: string, format: date-time }
+
+    TransactionResponse:
+      type: object
+      properties:
+        id:            { type: integer }
+        operationCode: { type: string }
+        operationName: { type: string }
+        tokensInput:   { type: integer }
+        tokensOutput:  { type: integer }
+        baseCost:      { type: integer }
+        totalCost:     { type: integer }
+        balanceBefore: { type: integer }
+        balanceAfter:  { type: integer }
+        status:        { type: string, enum: [SUCCESS, FAILED_INSUFFICIENT_TOKENS, FAILED_OPERATION_ERROR] }
+        errorMessage:  { type: string }
+        executedAt:    { type: string, format: date-time }
+
+    ExchangeRateResponse:
+      type: object
+      properties:
+        id:        { type: integer }
+        copPerUsd: { type: number }
+        updatedAt: { type: string, format: date-time }
+        updatedBy: { type: string }
+
+    MetricsResponse:
+      type: object
+      properties:
+        tokensByDay:
+          type: array
+          items:
+            type: object
+            properties:
+              day:         { type: string }
+              totalTokens: { type: integer }
+        mostExecutedOperations:
+          type: array
+          items:
+            type: object
+            properties:
+              operationCode: { type: string }
+              operationName: { type: string }
+              executions:    { type: integer }
+        topConsumers:
+          type: array
+          items:
+            type: object
+            properties:
+              userId:              { type: integer }
+              userName:            { type: string }
+              userEmail:           { type: string }
+              totalTokensConsumed: { type: integer }
+
+    PageMeta:
+      type: object
+      properties:
+        totalElements: { type: integer }
+        totalPages:    { type: integer }
+        size:          { type: integer }
+        number:        { type: integer }
+
+    ValidationError:
+      type: object
+      properties:
+        success: { type: boolean, example: false }
+        message: { type: string, example: "Error de validación" }
+        data:
+          type: object
+          additionalProperties: { type: string }
+
+tags:
+  - name: Autenticación
+  - name: Perfil y Transacciones
+  - name: Operaciones
+  - name: Planes
+  - name: Administración
+  - name: Tasa de Cambio
+
+paths:
+
+  # ─── AUTH ───────────────────────────────────────────────────
+  /api/v1/auth/register:
+    post:
+      tags: [Autenticación]
+      summary: Registrar nuevo usuario
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password, name]
+              properties:
+                email:    { type: string, format: email }
+                password: { type: string, minLength: 6 }
+                name:     { type: string }
+      responses:
+        '201':
+          description: Usuario registrado
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ApiResponse' }
+        '400':
+          description: Error de validación
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ValidationError' }
+
+  /api/v1/auth/login:
+    post:
+      tags: [Autenticación]
+      summary: Iniciar sesión y obtener JWT
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:    { type: string, format: email }
+                password: { type: string }
+      responses:
+        '200':
+          description: Login exitoso
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data: { $ref: '#/components/schemas/AuthResponse' }
+        '401':
+          description: Credenciales incorrectas
+
+  # ─── PERFIL Y TRANSACCIONES ─────────────────────────────────
+  /api/v1/profile:
+    get:
+      tags: [Perfil y Transacciones]
+      summary: Consultar perfil propio con saldo y plan activo
+      responses:
+        '200':
+          description: Perfil del usuario
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data: { $ref: '#/components/schemas/UserProfile' }
+
+  /api/v1/transactions:
+    get:
+      tags: [Perfil y Transacciones]
+      summary: Historial de transacciones propias (paginado)
+      parameters:
+        - in: query
+          name: page
+          schema: { type: integer, default: 0 }
+        - in: query
+          name: size
+          schema: { type: integer, default: 10 }
+      responses:
+        '200':
+          description: Historial paginado
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: object
+                        properties:
+                          content:
+                            type: array
+                            items: { $ref: '#/components/schemas/TransactionResponse' }
+                          page: { $ref: '#/components/schemas/PageMeta' }
+
+  # ─── OPERACIONES ────────────────────────────────────────────
+  /api/v1/operations/catalog:
+    get:
+      tags: [Operaciones]
+      summary: Consultar catálogo de operaciones activas
+      responses:
+        '200':
+          description: Catálogo activo
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data:
+                        type: array
+                        items: { $ref: '#/components/schemas/CatalogOperationResponse' }
+
+  /api/v1/operations/catalog/all:
+    get:
+      tags: [Operaciones]
+      summary: Catálogo completo con paginación (admin)
+      parameters:
+        - in: query
+          name: page
+          schema: { type: integer, default: 0 }
+        - in: query
+          name: size
+          schema: { type: integer, default: 10 }
+      responses:
+        '200':
+          description: Catálogo completo paginado
+
+  /api/v1/operations/{code}/execute:
+    post:
+      tags: [Operaciones]
+      summary: Ejecutar una operación del catálogo
+      parameters:
+        - in: path
+          name: code
+          required: true
+          schema: { type: string, example: "OP-01" }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [params]
+              properties:
+                params:
+                  type: object
+                  description: Parámetros específicos de cada operación
+            examples:
+              OP-01:
+                summary: Calculadora de crédito
+                value:
+                  params:
+                    precio: 5000000
+                    cuotas: 24
+                    tasa_mensual: 1.5
+              OP-02:
+                summary: Conversor COP/USD
+                value:
+                  params:
+                    monto: 100
+                    moneda_origen: "USD"
+              OP-03:
+                summary: Calculadora IMC
+                value:
+                  params:
+                    peso_kg: 75
+                    altura_cm: 175
+              OP-04:
+                summary: Calculadora de sueño
+                value:
+                  params:
+                    modo: "HORA_DESPERTAR"
+                    hora: "06:30"
+                    minutos_para_dormir: 14
+      responses:
+        '200':
+          description: Operación ejecutada
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data: { $ref: '#/components/schemas/ExecuteOperationResponse' }
+        '422':
+          description: Saldo insuficiente o error en cálculo
+
+  /api/v1/operations/{id}/toggle:
+    patch:
+      tags: [Operaciones]
+      summary: Activar o desactivar una operación (admin)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+        - in: query
+          name: active
+          required: true
+          schema: { type: boolean }
+      responses:
+        '200':
+          description: Estado actualizado
+
+  # ─── PLANES ─────────────────────────────────────────────────
+  /api/v1/plans:
+    get:
+      tags: [Planes]
+      summary: Listar planes disponibles (paginado)
+      parameters:
+        - in: query
+          name: page
+          schema: { type: integer, default: 0 }
+        - in: query
+          name: size
+          schema: { type: integer, default: 10 }
+      responses:
+        '200':
+          description: Planes paginados
+    post:
+      tags: [Planes]
+      summary: Crear nuevo plan (admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, tokensGranted]
+              properties:
+                name:          { type: string }
+                tokensGranted: { type: integer, minimum: 1 }
+                description:   { type: string }
+      responses:
+        '201':
+          description: Plan creado
+
+  /api/v1/plans/{id}:
+    get:
+      tags: [Planes]
+      summary: Consultar un plan por ID
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Plan encontrado
+    put:
+      tags: [Planes]
+      summary: Editar un plan (admin)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, tokensGranted]
+              properties:
+                name:          { type: string }
+                tokensGranted: { type: integer }
+                description:   { type: string }
+      responses:
+        '200':
+          description: Plan actualizado
+    delete:
+      tags: [Planes]
+      summary: Eliminar un plan (admin)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Plan eliminado
+        '422':
+          description: Plan tiene suscripciones activas
+
+  /api/v1/plans/{id}/subscribe:
+    post:
+      tags: [Planes]
+      summary: Suscribirse a un plan
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Suscripción realizada, tokens acreditados
+
+  # ─── ADMINISTRACIÓN ─────────────────────────────────────────
+  /api/v1/admin/users:
+    get:
+      tags: [Administración]
+      summary: Listar todos los usuarios (admin)
+      parameters:
+        - in: query
+          name: page
+          schema: { type: integer, default: 0 }
+        - in: query
+          name: size
+          schema: { type: integer, default: 10 }
+      responses:
+        '200':
+          description: Usuarios paginados
+
+  /api/v1/admin/users/{id}/activate:
+    patch:
+      tags: [Administración]
+      summary: Activar un usuario (admin)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Usuario activado
+
+  /api/v1/admin/users/{id}/deactivate:
+    patch:
+      tags: [Administración]
+      summary: Desactivar un usuario (admin)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Usuario desactivado
+
+  /api/v1/admin/users/{id}/recharge:
+    post:
+      tags: [Administración]
+      summary: Recargar tokens a un usuario (admin)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+        - in: query
+          name: amount
+          required: true
+          schema: { type: integer, minimum: 1 }
+      responses:
+        '200':
+          description: Tokens recargados
+
+  /api/v1/admin/users/{id}/plan/{planId}:
+    post:
+      tags: [Administración]
+      summary: Asignar plan a usuario (admin)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: integer }
+        - in: path
+          name: planId
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: Plan asignado
+
+  /api/v1/admin/metrics:
+    get:
+      tags: [Administración]
+      summary: Métricas globales de consumo (admin)
+      parameters:
+        - in: query
+          name: from
+          schema: { type: string, format: date, example: "2025-01-01" }
+        - in: query
+          name: to
+          schema: { type: string, format: date, example: "2025-12-31" }
+        - in: query
+          name: topN
+          schema: { type: integer, default: 5 }
+      responses:
+        '200':
+          description: Métricas globales
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/ApiResponse'
+                  - type: object
+                    properties:
+                      data: { $ref: '#/components/schemas/MetricsResponse' }
+
+  # ─── TASA DE CAMBIO ─────────────────────────────────────────
+  /api/v1/admin/exchange-rate:
+    get:
+      tags: [Tasa de Cambio]
+      summary: Consultar tasa COP/USD vigente (admin)
+      responses:
+        '200':
+          description: Tasa vigente
+    put:
+      tags: [Tasa de Cambio]
+      summary: Actualizar tasa COP/USD (admin)
+      parameters:
+        - in: query
+          name: value
+          required: true
+          schema: { type: number, example: 4350.50 }
+      responses:
+        '200':
+          description: Tasa actualizada
