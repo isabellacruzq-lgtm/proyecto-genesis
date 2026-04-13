@@ -1,5 +1,5 @@
-**Proyecto Génesis - Breaze in the Moon 🚀
-**
+**Proyecto Génesis - Breaze in the Moon 🚀**
+
 Proyecto Génesis es la plataforma tecnológica fundacional de Breaze in the Moon. Diseñada como un sistema de consumo de cómputo controlado, permite a los usuarios 
 ejecutar operaciones del catálogo mediante el consumo de tokens, garantizando una trazabilidad total de costos y saldos.
 
